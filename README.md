@@ -19,3 +19,11 @@ Improvments:
 Use cache instead of maps.
 Validate request.
 
+Project is in Java,spring boot,H2.
+
+To connect:
+URL ws://localhost:8080/tictactoe
+add to header -> userName
+
+Each message:
+{"index": 8, "playMove": "O"}

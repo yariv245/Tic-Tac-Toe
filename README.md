@@ -21,6 +21,8 @@ Validate request.
 Constants.
 Mediator pattern.
 Send message to only player on the same board.
+Connect player to the board he is connected to if its still active.
+
 
 Project is in Java,spring boot,H2.
 

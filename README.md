@@ -18,6 +18,9 @@ if player won he will get message he won and the other player will get what play
 Improvments:
 Use cache instead of maps.
 Validate request.
+Constants.
+Mediator pattern.
+Send message to only player on the same board.
 
 Project is in Java,spring boot,H2.
 

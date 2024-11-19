@@ -1,6 +1,6 @@
 package com.example.tic_tac_toe.configuration;
 
-import com.example.tic_tac_toe.TicTacToeWebSocketHandler;
+import com.example.tic_tac_toe.handler.TicTacToeWebSocketHandler;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;

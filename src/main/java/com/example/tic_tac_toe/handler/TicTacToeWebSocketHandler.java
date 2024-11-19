@@ -1,4 +1,4 @@
-package com.example.tic_tac_toe;
+package com.example.tic_tac_toe.handler;
 
 import com.example.tic_tac_toe.component.BoardComponent;
 import com.example.tic_tac_toe.component.PlayMoveComponent;

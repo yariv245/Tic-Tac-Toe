@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.HashSet;
+import java.util.Optional;
 
 
 @Component
@@ -20,22 +21,39 @@ public class BoardComponent {
     private final PlayerRepository playerRepository;
 
     public Board addPlayerToBoard(Player player) {
+        Optional<Board> activeBoardByPlayerId = boardRepository.findActiveBoardByPlayerId(player.getId());
+        if (activeBoardByPlayerId.isPresent()) {
+            return activeBoardByPlayerId.get();
+        }
         Board board = boardRepository.findActiveBoardWithLessThanTwoUsers()
                 .orElseGet(this::createTicTacToeBoard);
+        addPlayerToBoard(player, board);
+        addBoardToPlayer(board, player);
 
+        return updateEntities(board, player);
+    }
+
+    private Board updateEntities(Board board, Player player) {
+        Board saved = boardRepository.save(board);
+        playerRepository.save(player);
+        indexBoxRepository.saveAll(board.getIndexBoxes());
+
+        return saved;
+    }
+
+    private void addBoardToPlayer(Board board, Player player) {
+        if (player.getBoards() == null) {
+            player.setBoards(new HashSet<>());
+        }
+
+        player.getBoards().add(board);
+    }
+
+    private void addPlayerToBoard(Player player, Board board) {
         if (board.getPlayers() == null) {
             board.setPlayers(new HashSet<>());
         }
         board.getPlayers().add(player);
-
-        if (player.getBoards() == null) {
-            player.setBoards(new HashSet<>());
-        }
-        player.getBoards().add(board);
-        Board saved = boardRepository.save(board);
-        playerRepository.save(player);
-        indexBoxRepository.saveAll(board.getIndexBoxes());
-        return saved;
     }
 
     private Board createTicTacToeBoard() {

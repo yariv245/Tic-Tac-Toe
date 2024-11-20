@@ -92,6 +92,8 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
         log.info("Session CLOSED, id:{}", session.getId());
         Long boardId = sessionIdToBoardIdMap.get(session.getId());
         boardIdToSessionsMap.get(boardId).remove(session);
+        sessionIdToPlayerMap.remove(session.getId());
+        sessionIdToBoardIdMap.remove(session.getId());
     }
 
     private String getUserNameFromSession(WebSocketSession session) throws Exception {

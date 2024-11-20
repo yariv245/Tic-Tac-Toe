@@ -24,10 +24,10 @@ import java.util.*;
 @RequiredArgsConstructor
 public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
 
-    private final List<WebSocketSession> sessions = new ArrayList<>();
     private final Map<Long, Board> boardIdToBoardMap = new HashMap<>();
     private final Map<String, Long> sessionIdToBoardIdMap = new HashMap<>();
     private final Map<String, Player> sessionIdToPlayerMap = new HashMap<>();
+    private final Map<Long, List<WebSocketSession>> boardIdToSessionsMap = new HashMap<>();
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final PlayerComponent playerComponent;
     private final BoardComponent boardComponent;
@@ -40,10 +40,18 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
         Player player = playerComponent.getPlayer(userName);
         Board board = boardComponent.addPlayerToBoard(player);
 
-        sessions.add(session);
         sessionIdToPlayerMap.put(session.getId(), player);
         boardIdToBoardMap.put(board.getId(), board);
         sessionIdToBoardIdMap.put(session.getId(), board.getId());
+        putToMap(boardIdToSessionsMap, session, board);
+    }
+
+    private void putToMap(Map<Long, List<WebSocketSession>> boardIdToSessionsMap, WebSocketSession session, Board board) {
+        if (!boardIdToSessionsMap.containsKey(board.getId())) {
+            ArrayList<WebSocketSession> webSocketSessions = new ArrayList<>();
+            boardIdToSessionsMap.put(board.getId(), webSocketSessions);
+        }
+        boardIdToSessionsMap.get(board.getId()).add(session);
     }
 
     @Override
@@ -55,7 +63,8 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
             Player player = sessionIdToPlayerMap.get(session.getId());
             boolean won = playMoveComponent.play(playRequest, board, player);
             String response = getResponse(session, playRequest, won, player);
-            for (WebSocketSession webSocketSession : sessions) {
+            List<WebSocketSession> webSocketSessions = boardIdToSessionsMap.get(board.getId());
+            for (WebSocketSession webSocketSession : webSocketSessions) {
                 if (webSocketSession.isOpen() && !webSocketSession.getId().equals(session.getId())) {
                     webSocketSession.sendMessage(new TextMessage(response));
                 }
@@ -81,7 +90,8 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
         log.info("Session CLOSED, id:{}", session.getId());
-        sessions.remove(session);
+        Long boardId = sessionIdToBoardIdMap.get(session.getId());
+        boardIdToSessionsMap.get(boardId).remove(session);
     }
 
     private String getUserNameFromSession(WebSocketSession session) throws Exception {

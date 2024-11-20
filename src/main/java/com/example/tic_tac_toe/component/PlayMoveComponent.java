@@ -66,7 +66,7 @@ public class PlayMoveComponent {
         if (indexBox.getIndex() % 3 != 0)
             row++;
 
-        return check(indexNumberToEntityMap, indexBox, row,4,4);
+        return check(indexNumberToEntityMap, indexBox, row, 4, 4);
     }
 
     private boolean checkVertical(Map<Integer, IndexBox> indexNumberToEntityMap, IndexBox indexBox) {
@@ -75,7 +75,7 @@ public class PlayMoveComponent {
         if (indexBox.getIndex() % 3 != 0)
             row++;
 
-        return check(indexNumberToEntityMap, indexBox, row,3,6);
+        return check(indexNumberToEntityMap, indexBox, row, 3, 6);
     }
 
     private boolean checkHorizontal(Map<Integer, IndexBox> indexNumberToEntityMap, IndexBox indexBox) {
@@ -84,36 +84,67 @@ public class PlayMoveComponent {
         if (column == 0)
             column = 3;
 
-        return check(indexNumberToEntityMap, indexBox, column,1,2);
+        return check(indexNumberToEntityMap, indexBox, column, 1, 2);
     }
 
     private boolean check(Map<Integer, IndexBox> indexNumberToEntityMap, IndexBox indexBox, int caseType, int indexToCheck1, int indexToCheck2) {
-        Optional<PlayMove> move1 = null;
-        Optional<PlayMove> move2 = null;
-        Optional<PlayMove> move3 = null;
+        Optional<IndexBox> indexBox1 = Optional.empty();
+        Optional<IndexBox> indexBox2 = Optional.empty();
+        Optional<IndexBox> indexBox3 = Optional.empty();
 
         switch (caseType) {
             case 1:
-                move1 = Optional.of(indexBox.getPlayMove());
-                move2 = Optional.of(indexNumberToEntityMap.get(indexBox.getIndex() + indexToCheck1)).map(IndexBox::getPlayMove);
-                move3 = Optional.of(indexNumberToEntityMap.get(indexBox.getIndex() + indexToCheck2)).map(IndexBox::getPlayMove);
+                indexBox1 = Optional.of(indexBox);
+                indexBox2 = Optional.ofNullable(indexNumberToEntityMap.get(indexBox.getIndex() + indexToCheck1));
+                indexBox3 = Optional.ofNullable(indexNumberToEntityMap.get(indexBox.getIndex() + indexToCheck2));
                 break;
             case 2:
-                move1 = Optional.of(indexNumberToEntityMap.get(indexBox.getIndex() - indexToCheck1)).map(IndexBox::getPlayMove);
-                move2 = Optional.of(indexBox.getPlayMove());
-                move3 = Optional.of(indexNumberToEntityMap.get(indexBox.getIndex() + indexToCheck1)).map(IndexBox::getPlayMove);
+                indexBox1 = Optional.ofNullable(indexNumberToEntityMap.get(indexBox.getIndex() - indexToCheck1));
+                indexBox2 = Optional.of(indexBox);
+                indexBox3 = Optional.ofNullable(indexNumberToEntityMap.get(indexBox.getIndex() + indexToCheck1));
                 break;
             case 3:
-                move1 = Optional.of(indexNumberToEntityMap.get(indexBox.getIndex() - indexToCheck2)).map(IndexBox::getPlayMove);
-                move2 = Optional.of(indexNumberToEntityMap.get(indexBox.getIndex() - indexToCheck1)).map(IndexBox::getPlayMove);
-                move3 = Optional.of(indexBox.getPlayMove());
+                indexBox1 = Optional.ofNullable(indexNumberToEntityMap.get(indexBox.getIndex() - indexToCheck2));
+                indexBox2 = Optional.ofNullable(indexNumberToEntityMap.get(indexBox.getIndex() - indexToCheck1));
+                indexBox3 = Optional.of(indexBox);
                 break;
         }
 
-        return move1.isPresent()
-                && move2.isPresent()
-                && move3.isPresent()
-                && move1.get() == move3.get()
-                && move2.get() == move3.get();
+        return isSamePlayer(indexBox1, indexBox2, indexBox3)
+                && isSameMove(indexBox1, indexBox2, indexBox3);
     }
+
+    public boolean isSamePlayer(Optional<IndexBox> indexBox, Optional<IndexBox> indexBox2, Optional<IndexBox> indexBox3) {
+        Optional<Long> playerId1 = indexBox
+                .map(IndexBox::getPlayer)
+                .map(Player::getId);
+        Optional<Long> playerId2 = indexBox2
+                .map(IndexBox::getPlayer)
+                .map(Player::getId);
+        Optional<Long> playerId3 = indexBox3
+                .map(IndexBox::getPlayer)
+                .map(Player::getId);
+
+        return playerId1.isPresent()
+                && playerId2.isPresent()
+                && playerId3.isPresent()
+                && playerId1.get().equals(playerId2.get())
+                && playerId2.get().equals(playerId3.get());
+    }
+
+    public boolean isSameMove(Optional<IndexBox> indexBox, Optional<IndexBox> indexBox2, Optional<IndexBox> indexBox3) {
+        Optional<PlayMove> playMove1 = indexBox
+                .map(IndexBox::getPlayMove);
+        Optional<PlayMove> playMove2 = indexBox2
+                .map(IndexBox::getPlayMove);
+        Optional<PlayMove> playMove3 = indexBox3
+                .map(IndexBox::getPlayMove);
+
+        return playMove1.isPresent()
+                && playMove2.isPresent()
+                && playMove3.isPresent()
+                && playMove1.get().equals(playMove2.get())
+                && playMove2.get().equals(playMove3.get());
+    }
+
 }

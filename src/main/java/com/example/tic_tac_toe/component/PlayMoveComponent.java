@@ -7,6 +7,7 @@ import com.example.tic_tac_toe.model.entity.IndexBox;
 import com.example.tic_tac_toe.model.entity.Player;
 import com.example.tic_tac_toe.model.request.PlayRequest;
 import com.example.tic_tac_toe.repository.BoardRepository;
+import com.example.tic_tac_toe.repository.IndexBoxRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class PlayMoveComponent {
     private final BoardRepository boardRepository;
+    private final IndexBoxRepository indexBoxRepository;
 
     public boolean play(PlayRequest request, Board board, Player player) throws BadException {
         IndexBox indexBox = getIndexBox(request.getIndex(), board);
@@ -29,13 +31,14 @@ public class PlayMoveComponent {
 
         indexBox.setPlayMove(request.getPlayMove());
         indexBox.setPlayer(player);
+        indexBoxRepository.save(indexBox);
 
-        boolean won = isWon(indexBox, board);
-        if (won) {
-            board.setActive(false);
-        }
+        return isWon(indexBox, board);
+    }
+
+    public void closeGame(Board board) {
+        board.setActive(false);
         boardRepository.save(board);
-        return won;
     }
 
     private boolean isWon(IndexBox indexBox, Board board) {

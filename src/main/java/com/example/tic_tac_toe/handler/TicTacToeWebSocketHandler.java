@@ -55,7 +55,6 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
     }
 
     @Override
-    // todo:: validate request - bonus
     public void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         try {
             PlayRequest playRequest = objectMapper.readValue(message.getPayload(), PlayRequest.class);
@@ -65,14 +64,28 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
             boolean won = playMoveComponent.play(playRequest, board, player);
             String response = getResponse(session, playRequest, won, player);
             List<WebSocketSession> webSocketSessions = boardIdToSessionsMap.get(board.getId());
-            for (WebSocketSession webSocketSession : webSocketSessions) {
-                if (webSocketSession.isOpen() && !webSocketSession.getId().equals(session.getId())) {
-                    webSocketSession.sendMessage(new TextMessage(response));
-                }
+            sendMessages(session, webSocketSessions, response);
+            if (won) {
+                closeSessions(webSocketSessions);
+                playMoveComponent.closeGame(board);
             }
         } catch (BadException e) {
             log.error("Bad Exception Thrown ");
             session.sendMessage(new TextMessage(e.getMessage()));
+        }
+    }
+
+    private void closeSessions(List<WebSocketSession> webSocketSessions) throws IOException {
+        for (WebSocketSession session : webSocketSessions) {
+            session.close();
+        }
+    }
+
+    private void sendMessages(WebSocketSession session, List<WebSocketSession> webSocketSessions, String response) throws IOException {
+        for (WebSocketSession webSocketSession : webSocketSessions) {
+            if (webSocketSession.isOpen() && !webSocketSession.getId().equals(session.getId())) {
+                webSocketSession.sendMessage(new TextMessage(response));
+            }
         }
     }
 

@@ -59,6 +59,7 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
     public void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         try {
             PlayRequest playRequest = objectMapper.readValue(message.getPayload(), PlayRequest.class);
+            validateRequest(playRequest);
             Board board = boardIdToBoardMap.get(sessionIdToBoardIdMap.get(session.getId()));
             Player player = sessionIdToPlayerMap.get(session.getId());
             boolean won = playMoveComponent.play(playRequest, board, player);
@@ -73,6 +74,14 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
             log.error("Bad Exception Thrown ");
             session.sendMessage(new TextMessage(e.getMessage()));
         }
+    }
+
+    private void validateRequest(PlayRequest playRequest) throws BadException {
+        if (playRequest.getIndex() < 1 || playRequest.getIndex() > 9)
+            throw new BadException("index must be 1-9");
+
+        if (playRequest.getPlayMove() == null)
+            throw new BadException("playMove can't be null !");
     }
 
     private String getResponse(WebSocketSession session, PlayRequest playRequest, boolean won, Player player) throws IOException {

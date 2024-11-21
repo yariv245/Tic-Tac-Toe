@@ -57,8 +57,13 @@ public class BoardComponent {
     }
 
     private Board createTicTacToeBoard() {
-        Board board = Board.builder().indexBoxes(new HashSet<>()).build();
-        for (int i = 0; i < 9; i++) {
+        Board board = Board.builder()
+                .rows(3)
+                .columns(3)
+                .indexBoxes(new HashSet<>())
+                .build();
+        int amountOfBoxes = board.getRows() * board.getColumns();
+        for (int i = 0; i < amountOfBoxes; i++) {
             IndexBox indexBox = IndexBox.builder()
                     .index(i + 1)
                     .build();

@@ -43,9 +43,9 @@ public class PlayMoveComponent {
 
     private boolean isWon(IndexBox indexBox, Board board) {
         Map<Integer, IndexBox> indexNumberToEntityMap = getIndexNumberToEntityMap(board);
-        boolean checkedHorizontal = checkHorizontal(indexNumberToEntityMap, indexBox);
-        boolean checkedVertical = checkVertical(indexNumberToEntityMap, indexBox);
-        boolean checkedDiagonal = checkDiagonal(indexNumberToEntityMap, indexBox);
+        boolean checkedHorizontal = checkHorizontal(indexNumberToEntityMap, indexBox, board);
+        boolean checkedVertical = checkVertical(indexNumberToEntityMap, indexBox, board);
+        boolean checkedDiagonal = checkDiagonal(indexNumberToEntityMap, indexBox,board);
 
         return checkedHorizontal || checkedVertical || checkedDiagonal;
     }
@@ -64,36 +64,38 @@ public class PlayMoveComponent {
                 .orElseThrow(() -> new RuntimeException("request index invalid"));
     }
 
-    private boolean checkDiagonal(Map<Integer, IndexBox> indexNumberToEntityMap, IndexBox indexBox) {
-        int row = indexBox.getIndex() / 3;
-        if (indexBox.getIndex() % 3 != 0)
+    private boolean checkDiagonal(Map<Integer, IndexBox> indexNumberToEntityMap, IndexBox indexBox, Board board) {
+        int row = indexBox.getIndex() / board.getRows();
+
+        if (indexBox.getIndex() % board.getColumns() != 0)
             row++;
 
-        return check(indexNumberToEntityMap, indexBox, row, 4, 4);
+        return check(indexNumberToEntityMap, indexBox, row, board.getRows() + 1);
     }
 
-    private boolean checkVertical(Map<Integer, IndexBox> indexNumberToEntityMap, IndexBox indexBox) {
-        int row = indexBox.getIndex() / 3;
+    private boolean checkVertical(Map<Integer, IndexBox> indexNumberToEntityMap, IndexBox indexBox, Board board) {
+        int row = indexBox.getIndex() / board.getRows();
 
-        if (indexBox.getIndex() % 3 != 0)
+        if (indexBox.getIndex() % board.getColumns() != 0)
             row++;
 
-        return check(indexNumberToEntityMap, indexBox, row, 3, 6);
+        return check(indexNumberToEntityMap, indexBox, row, board.getColumns());
     }
 
-    private boolean checkHorizontal(Map<Integer, IndexBox> indexNumberToEntityMap, IndexBox indexBox) {
-        int column = indexBox.getIndex() % 3;
+    private boolean checkHorizontal(Map<Integer, IndexBox> indexNumberToEntityMap, IndexBox indexBox, Board board) {
+        int column = indexBox.getIndex() % board.getColumns();
 
         if (column == 0)
-            column = 3;
+            column = board.getColumns();
 
-        return check(indexNumberToEntityMap, indexBox, column, 1, 2);
+        return check(indexNumberToEntityMap, indexBox, column, 1);
     }
 
-    private boolean check(Map<Integer, IndexBox> indexNumberToEntityMap, IndexBox indexBox, int caseType, int indexToCheck1, int indexToCheck2) {
+    private boolean check(Map<Integer, IndexBox> indexNumberToEntityMap, IndexBox indexBox, int caseType, int indexToCheck1) {
         Optional<IndexBox> indexBox1 = Optional.empty();
         Optional<IndexBox> indexBox2 = Optional.empty();
         Optional<IndexBox> indexBox3 = Optional.empty();
+        int indexToCheck2 = indexToCheck1 * 2;
 
         switch (caseType) {
             case 1:

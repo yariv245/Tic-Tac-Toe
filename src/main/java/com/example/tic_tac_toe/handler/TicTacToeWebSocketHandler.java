@@ -35,15 +35,22 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        log.info("New Session, id:{}", session.getId());
-        String userName = getUserNameFromSession(session);
-        Player player = playerComponent.getPlayer(userName);
-        Board board = boardComponent.addPlayerToBoard(player);
+        try {
+            log.info("New Session, id:{}", session.getId());
+            String userName = getFromSession(session, "userName");
+            String password = getFromSession(session, "password");
+            Player player = playerComponent.getPlayer(userName, password);
+            Board board = boardComponent.addPlayerToBoard(player);
 
-        sessionIdToPlayerMap.put(session.getId(), player);
-        boardIdToBoardMap.put(board.getId(), board);
-        sessionIdToBoardIdMap.put(session.getId(), board.getId());
-        putToMap(boardIdToSessionsMap, session, board);
+            sessionIdToPlayerMap.put(session.getId(), player);
+            boardIdToBoardMap.put(board.getId(), board);
+            sessionIdToBoardIdMap.put(session.getId(), board.getId());
+            putToMap(boardIdToSessionsMap, session, board);
+        } catch (BadException e) {
+            log.error("Bad Exception Thrown " + e.getMessage());
+            session.sendMessage(new TextMessage(e.getMessage()));
+            session.close();
+        }
     }
 
     private void putToMap(Map<Long, List<WebSocketSession>> boardIdToSessionsMap, WebSocketSession session, Board board) {
@@ -71,8 +78,9 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
                 session.close();
             }
         } catch (BadException e) {
-            log.error("Bad Exception Thrown ");
+            log.error("Bad Exception Thrown " + e.getMessage());
             session.sendMessage(new TextMessage(e.getMessage()));
+            session.close();
         }
     }
 
@@ -115,16 +123,17 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
         log.info("Session CLOSED, id:{}", session.getId());
         Long boardId = sessionIdToBoardIdMap.get(session.getId());
-        boardIdToSessionsMap.get(boardId).remove(session);
+        Optional.ofNullable(boardIdToSessionsMap.get(boardId))
+                .map(sessions -> sessions.remove(session));
         sessionIdToPlayerMap.remove(session.getId());
         sessionIdToBoardIdMap.remove(session.getId());
     }
 
-    private String getUserNameFromSession(WebSocketSession session) throws Exception {
+    private String getFromSession(WebSocketSession session, String header) throws Exception {
 
         return Optional.of(session)
                 .map(WebSocketSession::getHandshakeHeaders)
-                .map(t -> t.get("username"))
+                .map(t -> t.get(header))
                 .map(collection -> collection.stream().findFirst())
                 .filter(Optional::isPresent)  // Check if the Optional contains a value
                 .map(Optional::get)

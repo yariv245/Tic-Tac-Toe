@@ -66,8 +66,9 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
             List<WebSocketSession> webSocketSessions = boardIdToSessionsMap.get(board.getId());
             sendMessages(session, webSocketSessions, response);
             if (won) {
-                closeSessions(webSocketSessions);
+                closeSessions(session, webSocketSessions);
                 playMoveComponent.closeGame(board);
+                session.close();
             }
         } catch (BadException e) {
             log.error("Bad Exception Thrown ");
@@ -75,9 +76,10 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
         }
     }
 
-    private void closeSessions(List<WebSocketSession> webSocketSessions) throws IOException {
+    private void closeSessions(WebSocketSession currentSession, List<WebSocketSession> webSocketSessions) throws IOException {
         for (WebSocketSession session : webSocketSessions) {
-            session.close();
+            if (!session.getId().equals(currentSession.getId()))
+                session.close();
         }
     }
 

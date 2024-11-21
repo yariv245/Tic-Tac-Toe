@@ -26,6 +26,9 @@ public class Player {
     @Column
     private String userName;
 
+    @Column
+    private String password;
+
     @ManyToMany(fetch = FetchType.EAGER)
     private Set<Board> boards;
 

@@ -24,6 +24,14 @@ public class Board {
     @Builder.Default
     private Boolean active = Boolean.TRUE;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private int rows = 0;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private int columns = 0;
+
     @CreatedDate
     private Timestamp createAt;
 

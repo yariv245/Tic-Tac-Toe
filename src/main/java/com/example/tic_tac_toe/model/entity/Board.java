@@ -5,8 +5,8 @@ import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 
 import java.sql.Timestamp;
+import java.util.HashSet;
 import java.util.Set;
-import java.util.UUID;
 
 @Entity
 @Table(name = "board")
@@ -36,7 +36,8 @@ public class Board {
     private Timestamp createAt;
 
     @OneToMany(mappedBy = "board", fetch = FetchType.EAGER)
-    private Set<IndexBox> indexBoxes;
+    @Builder.Default
+    private Set<Cell> cells = new HashSet<>();
 
     @ManyToMany(fetch = FetchType.EAGER)
     private Set<Player> players;

@@ -6,17 +6,16 @@ import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 
 import java.sql.Timestamp;
-import java.util.UUID;
 
 @Entity
-@Table(name = "index_box")
+@Table(name = "cell")
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
 // todo:: add constraint index && board id - cant have 2 indexBox with same index and board id
-public class IndexBox {
+public class Cell {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

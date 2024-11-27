@@ -6,7 +6,6 @@ import org.springframework.data.annotation.CreatedDate;
 
 import java.sql.Timestamp;
 import java.util.Set;
-import java.util.UUID;
 
 @Entity
 @Table(name = "player")
@@ -33,5 +32,5 @@ public class Player {
     private Set<Board> boards;
 
     @OneToMany(mappedBy = "player", fetch = FetchType.EAGER)
-    private Set<IndexBox> indexBoxes;
+    private Set<Cell> cells;
 }

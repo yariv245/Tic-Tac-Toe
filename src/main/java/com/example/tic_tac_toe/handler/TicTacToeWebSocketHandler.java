@@ -11,6 +11,7 @@ import com.example.tic_tac_toe.model.request.PlayRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -20,16 +21,20 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import java.io.IOException;
 import java.util.*;
 
+import static com.example.tic_tac_toe.util.CacheConstant.SESSION_ID_TO_PLAYER;
+
 @Component
 @Slf4j
 @RequiredArgsConstructor
 public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
+
 
     private final Map<Long, Board> boardIdToBoardMap = new HashMap<>();
     private final Map<Long, Long> boardIdToPlayerTurnMap = new HashMap<>();
     private final Map<String, Long> sessionIdToBoardIdMap = new HashMap<>();
     private final Map<String, Player> sessionIdToPlayerMap = new HashMap<>();
     private final Map<Long, List<WebSocketSession>> boardIdToSessionsMap = new HashMap<>();
+    private final CacheManager cacheManager;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final PlayerComponent playerComponent;
     private final BoardComponent boardComponent;
@@ -43,7 +48,7 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
             String password = getFromSession(session, "password");
             Player player = playerComponent.getPlayer(userName, password);
             Board board = boardComponent.addPlayerToBoard(player);
-
+            cacheManager.getCache(SESSION_ID_TO_PLAYER).put(session.getId(), player);
             sessionIdToPlayerMap.put(session.getId(), player);
             boardIdToBoardMap.put(board.getId(), board);
             sessionIdToBoardIdMap.put(session.getId(), board.getId());

@@ -122,5 +122,6 @@ mvn spring-boot:run
 - Caffeine cache for active boards.
 
 ### Improvements and Next Steps
+- Support in Draw case.
 - Enhance error handling and messaging for a smoother player experience.
 - Implement a timeout mechanism to handle inactive players.

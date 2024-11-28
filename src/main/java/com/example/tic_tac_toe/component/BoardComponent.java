@@ -5,12 +5,14 @@ import com.example.tic_tac_toe.model.entity.Cell;
 import com.example.tic_tac_toe.model.entity.Player;
 import com.example.tic_tac_toe.repository.BoardRepository;
 import com.example.tic_tac_toe.repository.CellRepository;
-import com.example.tic_tac_toe.repository.PlayerRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.HashSet;
 import java.util.Optional;
+
+import static com.example.tic_tac_toe.util.CacheConstant.BOARD_ID_TO_BOARD;
+import static com.example.tic_tac_toe.util.CacheConstant.USERNAME_TO_BOARD_ID;
 
 
 @Component
@@ -18,13 +20,16 @@ import java.util.Optional;
 public class BoardComponent {
     private final BoardRepository boardRepository;
     private final CellRepository cellRepository;
-    private final PlayerRepository playerRepository;
+    private final PlayerComponent playerComponent;
+    private final CaffeineCacheComponent caffeineCacheComponent;
 
     public Board addPlayerToBoard(Player player) {
         Optional<Board> activeBoardByPlayerId = boardRepository.findActiveBoardByPlayerId(player.getId());
+
         if (activeBoardByPlayerId.isPresent()) {
             return activeBoardByPlayerId.get();
         }
+
         Board board = boardRepository.findActiveBoardWithLessThanTwoUsers()
                 .orElseGet(this::createTicTacToeBoard);
         addPlayerToBoard(player, board);
@@ -34,9 +39,17 @@ public class BoardComponent {
     }
 
     private Board updateEntities(Board board, Player player) {
-        Board saved = boardRepository.save(board);
-        playerRepository.save(player);
+        Board saved = save(board);
+        playerComponent.save(player);
         cellRepository.saveAll(board.getCells());
+        caffeineCacheComponent.put(USERNAME_TO_BOARD_ID, player.getUserName(), board.getId());
+
+        return saved;
+    }
+
+    public Board save(Board board) {
+        Board saved = boardRepository.save(board);
+        caffeineCacheComponent.put(BOARD_ID_TO_BOARD, board.getId().toString(), board);
 
         return saved;
     }

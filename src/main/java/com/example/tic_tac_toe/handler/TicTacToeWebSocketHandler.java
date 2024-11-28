@@ -1,6 +1,7 @@
 package com.example.tic_tac_toe.handler;
 
 import com.example.tic_tac_toe.component.BoardComponent;
+import com.example.tic_tac_toe.component.CaffeineCacheComponent;
 import com.example.tic_tac_toe.component.PlayMoveComponent;
 import com.example.tic_tac_toe.component.PlayerComponent;
 import com.example.tic_tac_toe.exception.BadException;
@@ -20,20 +21,18 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import java.io.IOException;
 import java.util.*;
 
+import static com.example.tic_tac_toe.util.CacheConstant.*;
+
 @Component
 @Slf4j
 @RequiredArgsConstructor
 public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
 
-    private final Map<Long, Board> boardIdToBoardMap = new HashMap<>();
-    private final Map<Long, Long> boardIdToPlayerTurnMap = new HashMap<>();
-    private final Map<String, Long> sessionIdToBoardIdMap = new HashMap<>();
-    private final Map<String, Player> sessionIdToPlayerMap = new HashMap<>();
-    private final Map<Long, List<WebSocketSession>> boardIdToSessionsMap = new HashMap<>();
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final PlayerComponent playerComponent;
     private final BoardComponent boardComponent;
     private final PlayMoveComponent playMoveComponent;
+    private final CaffeineCacheComponent caffeineCacheComponent;
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -43,15 +42,13 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
             String password = getFromSession(session, "password");
             Player player = playerComponent.getPlayer(userName, password);
             Board board = boardComponent.addPlayerToBoard(player);
+            putToMap(session, board);
 
-            sessionIdToPlayerMap.put(session.getId(), player);
-            boardIdToBoardMap.put(board.getId(), board);
-            sessionIdToBoardIdMap.put(session.getId(), board.getId());
-            putToMap(boardIdToSessionsMap, session, board);
             if (board.getPlayers().size() == 2) {
-                Long firstPlayerId = getFirstPlayerId(board);
-                boardIdToPlayerTurnMap.put(board.getId(), firstPlayerId);
+                String firstPlayerUserName = getFirstPlayerUserName(board);
+                caffeineCacheComponent.put(BOARD_ID_TO_PLAYER_TURN, board.getId().toString(), firstPlayerUserName);
             }
+
         } catch (BadException e) {
             log.error("Bad Exception Thrown " + e.getMessage());
             session.sendMessage(new TextMessage(e.getMessage()));
@@ -59,20 +56,23 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
         }
     }
 
-    private static Long getFirstPlayerId(Board board) throws BadException {
+    private String getFirstPlayerUserName(Board board) throws BadException {
         return board.getPlayers()
                 .stream()
                 .findFirst()
-                .map(Player::getId)
+                .map(Player::getUserName)
                 .orElseThrow(() -> new BadException("Couldn't find first player id"));
     }
 
-    private void putToMap(Map<Long, List<WebSocketSession>> boardIdToSessionsMap, WebSocketSession session, Board board) {
-        if (!boardIdToSessionsMap.containsKey(board.getId())) {
-            ArrayList<WebSocketSession> webSocketSessions = new ArrayList<>();
-            boardIdToSessionsMap.put(board.getId(), webSocketSessions);
+    private void putToMap(WebSocketSession session, Board board) {
+        Optional<List> webSocketSessions = caffeineCacheComponent.find(BOARD_ID_TO_SESSIONS, board.getId().toString(), List.class);
+
+        if (webSocketSessions.isEmpty()) {
+            webSocketSessions = Optional.of(new ArrayList<WebSocketSession>());
+            caffeineCacheComponent.put(BOARD_ID_TO_SESSIONS, board.getId().toString(), webSocketSessions.get());
+
         }
-        boardIdToSessionsMap.get(board.getId()).add(session);
+        webSocketSessions.get().add(session);
     }
 
     @Override
@@ -80,26 +80,33 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
         try {
             PlayRequest playRequest = objectMapper.readValue(message.getPayload(), PlayRequest.class);
             validateRequest(playRequest);
-            Board board = boardIdToBoardMap.get(sessionIdToBoardIdMap.get(session.getId()));
-            Player player = sessionIdToPlayerMap.get(session.getId());
-            Long playerIdTurn = boardIdToPlayerTurnMap.get(board.getId());
+            String playerUserName = getFromSession(session, "userName");
+            Long boardId = caffeineCacheComponent.find(USERNAME_TO_BOARD_ID, playerUserName, Long.class)
+                    .orElseThrow();
+            Board board = caffeineCacheComponent.find(BOARD_ID_TO_BOARD, boardId.toString(), Board.class)
+                    .orElseThrow();
+            Player player = caffeineCacheComponent.find(USERNAME_TO_PLAYER, playerUserName, Player.class)
+                    .orElseThrow();
+            String playerUserNameTurn = caffeineCacheComponent.find(BOARD_ID_TO_PLAYER_TURN, board.getId().toString(), String.class)
+                    .orElseThrow();
 
-            if (!Objects.equals(playerIdTurn, player.getId())) {
+            if (!Objects.equals(playerUserNameTurn, player.getUserName())) {
                 session.sendMessage(new TextMessage("It's not your TURN !"));
                 return;
             }
 
             boolean won = playMoveComponent.play(playRequest, board, player);
             String response = getResponse(session, playRequest, won, player);
-            List<WebSocketSession> webSocketSessions = boardIdToSessionsMap.get(board.getId());
+            List<WebSocketSession> webSocketSessions = caffeineCacheComponent.find(BOARD_ID_TO_SESSIONS, board.getId().toString(), List.class)
+                    .orElseThrow();
             sendMessages(session, webSocketSessions, response);
             if (won) {
                 closeSessions(session, webSocketSessions);
                 playMoveComponent.closeGame(board);
                 session.close();
             } else {
-                Long opponentId = getOpponentId(player, board);
-                boardIdToPlayerTurnMap.put(board.getId(), opponentId);
+                String opponentUserName = getOpponentUserName(player, board);
+                caffeineCacheComponent.put(BOARD_ID_TO_PLAYER_TURN, board.getId().toString(), opponentUserName);
             }
         } catch (BadRequestException e) {
             log.error("Bad Request Thrown " + e.getMessage());
@@ -111,12 +118,12 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
         }
     }
 
-    private Long getOpponentId(Player player, Board board) throws BadException {
+    private String getOpponentUserName(Player player, Board board) throws BadException {
         return board.getPlayers()
                 .stream()
-                .filter(t -> !Objects.equals(t.getId(), player.getId()))
+                .filter(t -> !Objects.equals(t.getUserName(), player.getUserName()))
                 .findFirst()
-                .map(Player::getId)
+                .map(Player::getUserName)
                 .orElseThrow(() -> new BadException("coludn't find any Opponent to player:" + player.getUserName()));
     }
 
@@ -158,11 +165,11 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
         log.info("Session CLOSED, id:{}", session.getId());
-        Long boardId = sessionIdToBoardIdMap.get(session.getId());
-        Optional.ofNullable(boardIdToSessionsMap.get(boardId))
-                .map(sessions -> sessions.remove(session));
-        sessionIdToPlayerMap.remove(session.getId());
-        sessionIdToBoardIdMap.remove(session.getId());
+//        Long boardId = sessionIdToBoardIdMap.get(session.getId());
+//        Optional.ofNullable(boardIdToSessionsMap.get(boardId))
+//                .map(sessions -> sessions.remove(session));
+//        sessionIdToPlayerMap.remove(session.getId());
+//        sessionIdToBoardIdMap.remove(session.getId());
     }
 
     private String getFromSession(WebSocketSession session, String header) throws Exception {

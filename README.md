@@ -119,9 +119,8 @@ mvn spring-boot:run
 - Board structure supports rows and columns for better management.
 - Comprehensive win condition checks (horizontal, vertical, diagonal).
 - Validation of moves to prevent invalid inputs or duplicate moves.
-- Efficient caching for active boards.
+- Caffeine cache for active boards.
 
 ### Improvements and Next Steps
-- Cache
 - Enhance error handling and messaging for a smoother player experience.
 - Implement a timeout mechanism to handle inactive players.

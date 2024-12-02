@@ -4,10 +4,10 @@ import com.example.tic_tac_toe.exception.BadRequestException;
 import com.example.tic_tac_toe.exception.BusinessException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.socket.*;
-import org.springframework.web.socket.handler.ExceptionWebSocketHandlerDecorator;
+import org.springframework.web.socket.handler.WebSocketHandlerDecorator;
 
 @Slf4j
-public class CustomErrorHandler extends ExceptionWebSocketHandlerDecorator {
+public class CustomErrorHandler extends WebSocketHandlerDecorator {
 
     public CustomErrorHandler(WebSocketHandler delegate) {
         super(delegate);

@@ -1,9 +1,9 @@
 package com.example.tic_tac_toe.exception;
 
-public class BadException extends Exception {
+public class BusinessException extends RuntimeException {
     private String message;
 
-    public BadException(String message) {
+    public BusinessException(String message) {
         super(message);
     }
 }

@@ -1,6 +1,6 @@
 package com.example.tic_tac_toe.component;
 
-import com.example.tic_tac_toe.exception.BadException;
+import com.example.tic_tac_toe.exception.BusinessException;
 import com.example.tic_tac_toe.model.PlayMove;
 import com.example.tic_tac_toe.model.entity.Board;
 import com.example.tic_tac_toe.model.entity.Cell;
@@ -16,6 +16,8 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static com.example.tic_tac_toe.util.ErrorMessageConstants.CELL_ALREADY_TAKEN_MESSAGE;
+
 
 @Component
 @RequiredArgsConstructor
@@ -23,11 +25,11 @@ public class PlayMoveComponent {
     private final BoardRepository boardRepository;
     private final CellRepository cellRepository;
 
-    public boolean play(PlayRequest request, Board board, Player player) throws BadException {
+    public boolean play(PlayRequest request, Board board, Player player) {
         Cell cell = getCell(request.getIndex(), board);
 
         if (cell.getPlayMove() != null || cell.getPlayer() != null)
-            throw new BadException("Index box already taken!");
+            throw new BusinessException(String.format(CELL_ALREADY_TAKEN_MESSAGE,cell.getIndex()));
 
         cell.setPlayMove(request.getPlayMove());
         cell.setPlayer(player);
@@ -45,7 +47,7 @@ public class PlayMoveComponent {
         Map<Integer, Cell> indexNumberToEntityMap = getIndexNumberToEntityMap(board);
         boolean checkedHorizontal = checkHorizontal(indexNumberToEntityMap, cell, board);
         boolean checkedVertical = checkVertical(indexNumberToEntityMap, cell, board);
-        boolean checkedDiagonal = checkDiagonal(indexNumberToEntityMap, cell,board);
+        boolean checkedDiagonal = checkDiagonal(indexNumberToEntityMap, cell, board);
 
         return checkedHorizontal || checkedVertical || checkedDiagonal;
     }

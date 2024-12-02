@@ -6,6 +6,7 @@ import com.example.tic_tac_toe.component.PlayMoveComponent;
 import com.example.tic_tac_toe.component.PlayerComponent;
 import com.example.tic_tac_toe.exception.BadException;
 import com.example.tic_tac_toe.exception.BadRequestException;
+import com.example.tic_tac_toe.exception.BusinessException;
 import com.example.tic_tac_toe.model.entity.Board;
 import com.example.tic_tac_toe.model.entity.Player;
 import com.example.tic_tac_toe.model.request.PlayRequest;
@@ -22,6 +23,7 @@ import java.io.IOException;
 import java.util.*;
 
 import static com.example.tic_tac_toe.util.CacheConstant.*;
+import static com.example.tic_tac_toe.util.ErrorMessageConstants.*;
 
 @Component
 @Slf4j
@@ -112,19 +114,19 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
             log.error("Bad Request Thrown " + e.getMessage());
             session.sendMessage(new TextMessage(e.getMessage()));
             session.close();
-        } catch (BadException e) {
-            log.error("Bad Exception Thrown " + e.getMessage());
+        } catch (BusinessException e) {
+            log.error("Business Logic Exception Thrown " + e.getMessage());
             session.sendMessage(new TextMessage(e.getMessage()));
         }
     }
 
-    private String getOpponentUserName(Player player, Board board) throws BadException {
+    private String getOpponentUserName(Player player, Board board) {
         return board.getPlayers()
                 .stream()
                 .filter(t -> !Objects.equals(t.getUserName(), player.getUserName()))
                 .findFirst()
                 .map(Player::getUserName)
-                .orElseThrow(() -> new BadException("coludn't find any Opponent to player:" + player.getUserName()));
+                .orElseThrow(() -> new BusinessException("coludn't find any Opponent to player:" + player.getUserName()));
     }
 
     private void closeSessions(WebSocketSession currentSession, List<WebSocketSession> webSocketSessions) throws IOException {
@@ -142,12 +144,13 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
         }
     }
 
-    private void validateRequest(PlayRequest playRequest) throws BadRequestException {
+    private void validateRequest(PlayRequest playRequest) {
+
         if (playRequest.getIndex() < 1 || playRequest.getIndex() > 9)
-            throw new BadRequestException("index must be 1-9");
+            throw new BadRequestException(INDEX_ERROR_MESSAGE);
 
         if (playRequest.getPlayMove() == null)
-            throw new BadRequestException("playMove can't be null !");
+            throw new BadRequestException(PLAY_MOVE_ERROR_MESSAGE);
     }
 
     private String getResponse(WebSocketSession session, PlayRequest playRequest, boolean won, Player player) throws IOException {
@@ -172,7 +175,7 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
 //        sessionIdToBoardIdMap.remove(session.getId());
     }
 
-    private String getFromSession(WebSocketSession session, String header) throws Exception {
+    private String getFromSession(WebSocketSession session, String header) {
 
         return Optional.of(session)
                 .map(WebSocketSession::getHandshakeHeaders)
@@ -180,6 +183,6 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
                 .map(collection -> collection.stream().findFirst())
                 .filter(Optional::isPresent)  // Check if the Optional contains a value
                 .map(Optional::get)
-                .orElseThrow(() -> new Exception(("NO passowrd found on connect session")));
+                .orElseThrow(() -> new BadRequestException(String.format(HEADER_PARAM_NOT_FOUND, header)));
     }
 }

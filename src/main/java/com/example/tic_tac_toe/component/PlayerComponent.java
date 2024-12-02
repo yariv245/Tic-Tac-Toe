@@ -1,6 +1,6 @@
 package com.example.tic_tac_toe.component;
 
-import com.example.tic_tac_toe.exception.BadException;
+import com.example.tic_tac_toe.exception.BadRequestException;
 import com.example.tic_tac_toe.model.entity.Player;
 import com.example.tic_tac_toe.repository.PlayerRepository;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import java.util.Optional;
 
 import static com.example.tic_tac_toe.util.CacheConstant.USERNAME_TO_PLAYER;
+import static com.example.tic_tac_toe.util.ErrorMessageConstants.WRONG_PASSWORD_MESSAGE;
 
 
 @Component
@@ -19,7 +20,7 @@ public class PlayerComponent {
     private final CacheManager cacheManager;
     private final CaffeineCacheComponent caffeineCacheComponent;
 
-    public Player getPlayer(String userName, String password) throws BadException {
+    public Player getPlayer(String userName, String password) {
         Optional<Player> cached1Player = caffeineCacheComponent.find(USERNAME_TO_PLAYER, userName, Player.class);
 
         if (cached1Player.isPresent())
@@ -32,7 +33,7 @@ public class PlayerComponent {
 
         return byUserName
                 .filter(player -> password.equals(player.getPassword()))
-                .orElseThrow(() -> new BadException("Wrong passowrd !"));
+                .orElseThrow(() -> new BadRequestException(WRONG_PASSWORD_MESSAGE));
     }
 
     private Player createPlayer(String userName, String password) {

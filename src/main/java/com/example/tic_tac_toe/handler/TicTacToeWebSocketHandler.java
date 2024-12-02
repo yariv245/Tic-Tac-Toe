@@ -4,7 +4,6 @@ import com.example.tic_tac_toe.component.BoardComponent;
 import com.example.tic_tac_toe.component.CaffeineCacheComponent;
 import com.example.tic_tac_toe.component.PlayMoveComponent;
 import com.example.tic_tac_toe.component.PlayerComponent;
-import com.example.tic_tac_toe.exception.BadException;
 import com.example.tic_tac_toe.exception.BadRequestException;
 import com.example.tic_tac_toe.exception.BusinessException;
 import com.example.tic_tac_toe.model.entity.Board;
@@ -38,32 +37,27 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        try {
-            log.info("New Session, id:{}", session.getId());
-            String userName = getFromSession(session, "userName");
-            String password = getFromSession(session, "password");
-            Player player = playerComponent.getPlayer(userName, password);
-            Board board = boardComponent.addPlayerToBoard(player);
-            putToMap(session, board);
+        log.info("New Session, id:{}", session.getId());
+        String userName = getFromSession(session, "userName");
+        String password = getFromSession(session, "password");
+        Player player = playerComponent.getPlayer(userName, password);
+        Board board = boardComponent.addPlayerToBoard(player);
+        putToMap(session, board);
 
-            if (board.getPlayers().size() == 2) {
-                String firstPlayerUserName = getFirstPlayerUserName(board);
-                caffeineCacheComponent.put(BOARD_ID_TO_PLAYER_TURN, board.getId().toString(), firstPlayerUserName);
-            }
-
-        } catch (BadException e) {
-            log.error("Bad Exception Thrown " + e.getMessage());
-            session.sendMessage(new TextMessage(e.getMessage()));
-            session.close();
+        if (board.getPlayers().size() == 2) {
+            String firstPlayerUserName = getFirstPlayerUserName(board);
+            caffeineCacheComponent.put(BOARD_ID_TO_PLAYER_TURN, board.getId().toString(), firstPlayerUserName);
         }
+
+
     }
 
-    private String getFirstPlayerUserName(Board board) throws BadException {
+    private String getFirstPlayerUserName(Board board) {
         return board.getPlayers()
                 .stream()
                 .findFirst()
                 .map(Player::getUserName)
-                .orElseThrow(() -> new BadException("Couldn't find first player id"));
+                .orElseThrow(() -> new BusinessException(FIRST_PLAYER_NOT_FOUND_MESSAGE));
     }
 
     private void putToMap(WebSocketSession session, Board board) {
@@ -118,7 +112,7 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
                 .filter(t -> !Objects.equals(t.getUserName(), player.getUserName()))
                 .findFirst()
                 .map(Player::getUserName)
-                .orElseThrow(() -> new BusinessException("coludn't find any Opponent to player:" + player.getUserName()));
+                .orElseThrow(() -> new BusinessException(OPPONENT_NOT_FOUND_MESSAGE));
     }
 
     private void closeSessions(WebSocketSession currentSession, List<WebSocketSession> webSocketSessions) throws IOException {

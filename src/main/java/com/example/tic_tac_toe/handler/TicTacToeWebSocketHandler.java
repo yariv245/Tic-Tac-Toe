@@ -79,45 +79,37 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
-        try {
-            PlayRequest playRequest = objectMapper.readValue(message.getPayload(), PlayRequest.class);
-            validateRequest(playRequest);
-            String playerUserName = getFromSession(session, "userName");
-            Long boardId = caffeineCacheComponent.find(USERNAME_TO_BOARD_ID, playerUserName, Long.class)
-                    .orElseThrow();
-            Board board = caffeineCacheComponent.find(BOARD_ID_TO_BOARD, boardId.toString(), Board.class)
-                    .orElseThrow();
-            Player player = caffeineCacheComponent.find(USERNAME_TO_PLAYER, playerUserName, Player.class)
-                    .orElseThrow();
-            String playerUserNameTurn = caffeineCacheComponent.find(BOARD_ID_TO_PLAYER_TURN, board.getId().toString(), String.class)
-                    .orElseThrow();
+        PlayRequest playRequest = objectMapper.readValue(message.getPayload(), PlayRequest.class);
+        validateRequest(playRequest);
+        String playerUserName = getFromSession(session, "userName");
+        Long boardId = caffeineCacheComponent.find(USERNAME_TO_BOARD_ID, playerUserName, Long.class)
+                .orElseThrow();
+        Board board = caffeineCacheComponent.find(BOARD_ID_TO_BOARD, boardId.toString(), Board.class)
+                .orElseThrow();
+        Player player = caffeineCacheComponent.find(USERNAME_TO_PLAYER, playerUserName, Player.class)
+                .orElseThrow();
+        String playerUserNameTurn = caffeineCacheComponent.find(BOARD_ID_TO_PLAYER_TURN, board.getId().toString(), String.class)
+                .orElseThrow();
 
-            if (!Objects.equals(playerUserNameTurn, player.getUserName())) {
-                session.sendMessage(new TextMessage("It's not your TURN !"));
-                return;
-            }
-
-            boolean won = playMoveComponent.play(playRequest, board, player);
-            String response = getResponse(session, playRequest, won, player);
-            List<WebSocketSession> webSocketSessions = caffeineCacheComponent.find(BOARD_ID_TO_SESSIONS, board.getId().toString(), List.class)
-                    .orElseThrow();
-            sendMessages(session, webSocketSessions, response);
-            if (won) {
-                closeSessions(session, webSocketSessions);
-                playMoveComponent.closeGame(board);
-                session.close();
-            } else {
-                String opponentUserName = getOpponentUserName(player, board);
-                caffeineCacheComponent.put(BOARD_ID_TO_PLAYER_TURN, board.getId().toString(), opponentUserName);
-            }
-        } catch (BadRequestException e) {
-            log.error("Bad Request Thrown " + e.getMessage());
-            session.sendMessage(new TextMessage(e.getMessage()));
-            session.close();
-        } catch (BusinessException e) {
-            log.error("Business Logic Exception Thrown " + e.getMessage());
-            session.sendMessage(new TextMessage(e.getMessage()));
+        if (!Objects.equals(playerUserNameTurn, player.getUserName())) {
+            session.sendMessage(new TextMessage("It's not your TURN !"));
+            return;
         }
+
+        boolean won = playMoveComponent.play(playRequest, board, player);
+        String response = getResponse(session, playRequest, won, player);
+        List<WebSocketSession> webSocketSessions = caffeineCacheComponent.find(BOARD_ID_TO_SESSIONS, board.getId().toString(), List.class)
+                .orElseThrow();
+        sendMessages(session, webSocketSessions, response);
+        if (won) {
+            closeSessions(session, webSocketSessions);
+            playMoveComponent.closeGame(board);
+            session.close();
+        } else {
+            String opponentUserName = getOpponentUserName(player, board);
+            caffeineCacheComponent.put(BOARD_ID_TO_PLAYER_TURN, board.getId().toString(), opponentUserName);
+        }
+
     }
 
     private String getOpponentUserName(Player player, Board board) {

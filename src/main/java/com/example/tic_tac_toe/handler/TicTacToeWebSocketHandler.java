@@ -95,10 +95,11 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
         List<WebSocketSession> webSocketSessions = caffeineCacheComponent.find(BOARD_ID_TO_SESSIONS, board.getId().toString(), List.class)
                 .orElseThrow();
         sendMessages(session, webSocketSessions, response);
+
         if (won) {
             closeSessions(session, webSocketSessions);
             playMoveComponent.closeGame(board);
-            session.close();
+            session.close(CloseStatus.NORMAL);
         } else {
             String opponentUserName = getOpponentUserName(player, board);
             caffeineCacheComponent.put(BOARD_ID_TO_PLAYER_TURN, board.getId().toString(), opponentUserName);
@@ -118,7 +119,7 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
     private void closeSessions(WebSocketSession currentSession, List<WebSocketSession> webSocketSessions) throws IOException {
         for (WebSocketSession session : webSocketSessions) {
             if (!session.getId().equals(currentSession.getId()))
-                session.close();
+                session.close(CloseStatus.NORMAL);
         }
     }
 
@@ -154,11 +155,14 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
         log.info("Session CLOSED, id:{}", session.getId());
-//        Long boardId = sessionIdToBoardIdMap.get(session.getId());
-//        Optional.ofNullable(boardIdToSessionsMap.get(boardId))
-//                .map(sessions -> sessions.remove(session));
-//        sessionIdToPlayerMap.remove(session.getId());
-//        sessionIdToBoardIdMap.remove(session.getId());
+        String username = getFromSession(session, "username");
+        caffeineCacheComponent.find(USERNAME_TO_BOARD_ID, username, Long.class)
+                .ifPresent(boardId -> {
+                    caffeineCacheComponent.evictIfPresent(BOARD_ID_TO_PLAYER_TURN, boardId.toString());
+                    caffeineCacheComponent.evictIfPresent(BOARD_ID_TO_SESSIONS, boardId.toString());
+                });
+        caffeineCacheComponent.evictIfPresent(USERNAME_TO_BOARD_ID, username);
+        caffeineCacheComponent.evictIfPresent(USERNAME_TO_PLAYER, username);
     }
 
     private String getFromSession(WebSocketSession session, String header) {

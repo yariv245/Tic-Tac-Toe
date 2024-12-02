@@ -16,6 +16,8 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static com.example.tic_tac_toe.util.ErrorMessageConstants.CELL_ALREADY_TAKEN_MESSAGE;
+
 
 @Component
 @RequiredArgsConstructor
@@ -27,7 +29,7 @@ public class PlayMoveComponent {
         Cell cell = getCell(request.getIndex(), board);
 
         if (cell.getPlayMove() != null || cell.getPlayer() != null)
-            throw new BusinessException("Index box already taken!");
+            throw new BusinessException(String.format(CELL_ALREADY_TAKEN_MESSAGE,cell.getIndex()));
 
         cell.setPlayMove(request.getPlayMove());
         cell.setPlayer(player);

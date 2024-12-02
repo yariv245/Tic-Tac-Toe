@@ -17,7 +17,6 @@ import static com.example.tic_tac_toe.util.ErrorMessageConstants.WRONG_PASSWORD_
 @RequiredArgsConstructor
 public class PlayerComponent {
     private final PlayerRepository playerRepository;
-    private final CacheManager cacheManager;
     private final CaffeineCacheComponent caffeineCacheComponent;
 
     public Player getPlayer(String userName, String password) {

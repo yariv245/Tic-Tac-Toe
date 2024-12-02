@@ -36,7 +36,7 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
     private final CaffeineCacheComponent caffeineCacheComponent;
 
     @Override
-    public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+    public void afterConnectionEstablished(WebSocketSession session) {
         log.info("New Session, id:{}", session.getId());
         String userName = getFromSession(session, "userName");
         String password = getFromSession(session, "password");

@@ -37,18 +37,17 @@ public class PlayerComponent {
     }
 
     private Player createPlayer(String userName, String password) {
-        Player player = playerRepository.save(Player.builder()
+        return save(Player.builder()
                 .userName(userName)
                 .password(password)
                 .build());
-        caffeineCacheComponent.put(USERNAME_TO_PLAYER, userName, player);
-
-        return player;
     }
 
-    public void save(Player player) {
+    public Player save(Player player) {
         Player saved = playerRepository.save(player);
         caffeineCacheComponent.put(USERNAME_TO_PLAYER, saved.getUserName(), saved);
+
+        return saved;
     }
 
 }

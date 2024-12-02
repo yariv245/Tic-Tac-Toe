@@ -120,8 +120,8 @@ mvn spring-boot:run
 - Comprehensive win condition checks (horizontal, vertical, diagonal).
 - Validation of moves to prevent invalid inputs or duplicate moves.
 - Caffeine cache for active boards.
+- Error handling and messaging for a smoother player experience.
 
 ### Improvements and Next Steps
 - Support in Draw case.
-- Enhance error handling and messaging for a smoother player experience.
 - Implement a timeout mechanism to handle inactive players.

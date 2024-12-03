@@ -1,6 +1,6 @@
 package com.example.tic_tac_toe.configuration;
 
-import com.example.tic_tac_toe.controller.CustomErrorHandler;
+import com.example.tic_tac_toe.handler.CustomErrorHandler;
 import com.example.tic_tac_toe.handler.TicTacToeWebSocketHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;

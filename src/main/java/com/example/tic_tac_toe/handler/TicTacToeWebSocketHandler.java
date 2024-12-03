@@ -48,8 +48,6 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
             String firstPlayerUserName = getFirstPlayerUserName(board);
             caffeineCacheComponent.put(BOARD_ID_TO_PLAYER_TURN, board.getId().toString(), firstPlayerUserName);
         }
-
-
     }
 
     private String getFirstPlayerUserName(Board board) {
@@ -98,7 +96,7 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
 
         if (won) {
             closeSessions(session, webSocketSessions);
-            playMoveComponent.closeGame(board);
+            boardComponent.closeGame(board);
             session.close(CloseStatus.NORMAL);
         } else {
             String opponentUserName = getOpponentUserName(player, board);

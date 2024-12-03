@@ -22,25 +22,19 @@ import static com.example.tic_tac_toe.util.ErrorMessageConstants.CELL_ALREADY_TA
 @Component
 @RequiredArgsConstructor
 public class PlayMoveComponent {
-    private final BoardRepository boardRepository;
     private final CellRepository cellRepository;
 
     public boolean play(PlayRequest request, Board board, Player player) {
         Cell cell = getCell(request.getIndex(), board);
 
         if (cell.getPlayMove() != null || cell.getPlayer() != null)
-            throw new BusinessException(String.format(CELL_ALREADY_TAKEN_MESSAGE,cell.getIndex()));
+            throw new BusinessException(String.format(CELL_ALREADY_TAKEN_MESSAGE, cell.getIndex()));
 
         cell.setPlayMove(request.getPlayMove());
         cell.setPlayer(player);
         cellRepository.save(cell);
 
         return isWon(cell, board);
-    }
-
-    public void closeGame(Board board) {
-        board.setActive(false);
-        boardRepository.save(board);
     }
 
     private boolean isWon(Cell cell, Board board) {

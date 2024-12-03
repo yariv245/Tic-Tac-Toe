@@ -47,9 +47,14 @@ public class BoardComponent {
         return saved;
     }
 
+    public void closeGame(Board board) {
+        board.setActive(false);
+        boardRepository.save(board);
+    }
+
     public Board save(Board board) {
         Board saved = boardRepository.save(board);
-        caffeineCacheComponent.put(BOARD_ID_TO_BOARD, board.getId().toString(), board);
+        caffeineCacheComponent.put(BOARD_ID_TO_BOARD, board.getId().toString(), saved);
 
         return saved;
     }

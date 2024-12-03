@@ -1,4 +1,4 @@
-package com.example.tic_tac_toe.controller;
+package com.example.tic_tac_toe.handler;
 
 import com.example.tic_tac_toe.exception.BadRequestException;
 import com.example.tic_tac_toe.exception.BusinessException;

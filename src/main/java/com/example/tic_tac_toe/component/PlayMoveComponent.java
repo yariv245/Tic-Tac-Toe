@@ -6,13 +6,11 @@ import com.example.tic_tac_toe.model.entity.Board;
 import com.example.tic_tac_toe.model.entity.Cell;
 import com.example.tic_tac_toe.model.entity.Player;
 import com.example.tic_tac_toe.model.request.PlayRequest;
-import com.example.tic_tac_toe.repository.BoardRepository;
 import com.example.tic_tac_toe.repository.CellRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -24,7 +22,7 @@ import static com.example.tic_tac_toe.util.ErrorMessageConstants.CELL_ALREADY_TA
 public class PlayMoveComponent {
     private final CellRepository cellRepository;
 
-    public boolean play(PlayRequest request, Board board, Player player) {
+    public Cell play(PlayRequest request, Board board, Player player) {
         Cell cell = getCell(request.getIndex(), board);
 
         if (cell.getPlayMove() != null || cell.getPlayer() != null)
@@ -32,12 +30,46 @@ public class PlayMoveComponent {
 
         cell.setPlayMove(request.getPlayMove());
         cell.setPlayer(player);
-        cellRepository.save(cell);
 
-        return isWon(cell, board);
+        return cellRepository.save(cell);
     }
 
-    private boolean isWon(Cell cell, Board board) {
+    public boolean isDraw(Board board, PlayMove playMove) {
+        List<Cell> emptyCells = getEmptyCells(board);
+
+        if (emptyCells.size() != 1)
+            return false;
+
+        return findOpponentPlayMove(playMove)
+                .map(this::mapToTestCell)
+                .map(testCell -> {
+                    testCell.setIndex(emptyCells.get(0).getIndex());
+
+                    return !isWon(testCell, board);
+                })
+                .orElse(false);
+    }
+
+    private Optional<PlayMove> findOpponentPlayMove(PlayMove playMove) {
+        return Arrays.stream(PlayMove.values())
+                .filter(pm -> !pm.equals(playMove))
+                .findFirst();
+    }
+
+    private Cell mapToTestCell(PlayMove playMove) {
+        return Cell.builder()
+                .playMove(playMove)
+                .build();
+    }
+
+    private List<Cell> getEmptyCells(Board board) {
+        return board.getCells()
+                .stream()
+                .filter(cell -> Objects.isNull(cell.getPlayMove()))
+                .collect(Collectors.toList());
+    }
+
+    public boolean isWon(Cell cell, Board board) {
         Map<Integer, Cell> indexNumberToEntityMap = getIndexNumberToEntityMap(board);
         boolean checkedHorizontal = checkHorizontal(indexNumberToEntityMap, cell, board);
         boolean checkedVertical = checkVertical(indexNumberToEntityMap, cell, board);
@@ -110,6 +142,9 @@ public class PlayMoveComponent {
                 cell3 = Optional.of(cell);
                 break;
         }
+
+        if (cell1.isEmpty() || cell2.isEmpty() || cell3.isEmpty())
+            return false;
 
         return isSamePlayer(cell1, cell2, cell3)
                 && isSameMove(cell1, cell2, cell3);

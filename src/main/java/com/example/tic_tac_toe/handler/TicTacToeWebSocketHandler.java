@@ -1,12 +1,10 @@
 package com.example.tic_tac_toe.handler;
 
-import com.example.tic_tac_toe.component.BoardComponent;
-import com.example.tic_tac_toe.component.CaffeineCacheComponent;
-import com.example.tic_tac_toe.component.PlayMoveComponent;
-import com.example.tic_tac_toe.component.PlayerComponent;
+import com.example.tic_tac_toe.component.*;
 import com.example.tic_tac_toe.exception.BadRequestException;
 import com.example.tic_tac_toe.exception.BusinessException;
 import com.example.tic_tac_toe.model.entity.Board;
+import com.example.tic_tac_toe.model.entity.Cell;
 import com.example.tic_tac_toe.model.entity.Player;
 import com.example.tic_tac_toe.model.request.PlayRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -34,6 +32,7 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
     private final BoardComponent boardComponent;
     private final PlayMoveComponent playMoveComponent;
     private final CaffeineCacheComponent caffeineCacheComponent;
+    private final SessionComponent sessionComponent;
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
@@ -88,21 +87,34 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
             return;
         }
 
-        boolean won = playMoveComponent.play(playRequest, board, player);
-        String response = getResponse(session, playRequest, won, player);
+        Cell cell = playMoveComponent.play(playRequest, board, player);
         List<WebSocketSession> webSocketSessions = caffeineCacheComponent.find(BOARD_ID_TO_SESSIONS, board.getId().toString(), List.class)
                 .orElseThrow();
-        sendMessages(session, webSocketSessions, response);
 
-        if (won) {
-            closeSessions(session, webSocketSessions);
+        if (playMoveComponent.isWon(cell, board)) {
+            log.info("player won!");
+            session.sendMessage(new TextMessage("You are the WINNER !!"));
+            sessionComponent.sendMessages(session, webSocketSessions, player.getUserName() + " WON !!");
+            sessionComponent.closeSessions(session, webSocketSessions);
             boardComponent.closeGame(board);
             session.close(CloseStatus.NORMAL);
-        } else {
-            String opponentUserName = getOpponentUserName(player, board);
-            caffeineCacheComponent.put(BOARD_ID_TO_PLAYER_TURN, board.getId().toString(), opponentUserName);
+        } if(playMoveComponent.isDraw(board, playRequest.getPlayMove())){
+            log.info("!! DRAW !!");
+            sessionComponent.sendMessages(webSocketSessions, "DRAW !");
+            sessionComponent.closeSessions(session, webSocketSessions);
+            boardComponent.closeGame(board);
+            session.close(CloseStatus.NORMAL);
+        }else {
+            String response = objectMapper.writeValueAsString(playRequest);
+            sessionComponent.sendMessages(session, webSocketSessions, response);
+            updateNextPlayerTurn(player, board);
         }
 
+    }
+
+    private void updateNextPlayerTurn(Player player, Board board) {
+        String opponentUserName = getOpponentUserName(player, board);
+        caffeineCacheComponent.put(BOARD_ID_TO_PLAYER_TURN, board.getId().toString(), opponentUserName);
     }
 
     private String getOpponentUserName(Player player, Board board) {
@@ -114,21 +126,6 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
                 .orElseThrow(() -> new BusinessException(OPPONENT_NOT_FOUND_MESSAGE));
     }
 
-    private void closeSessions(WebSocketSession currentSession, List<WebSocketSession> webSocketSessions) throws IOException {
-        for (WebSocketSession session : webSocketSessions) {
-            if (!session.getId().equals(currentSession.getId()))
-                session.close(CloseStatus.NORMAL);
-        }
-    }
-
-    private void sendMessages(WebSocketSession session, List<WebSocketSession> webSocketSessions, String response) throws IOException {
-        for (WebSocketSession webSocketSession : webSocketSessions) {
-            if (webSocketSession.isOpen() && !webSocketSession.getId().equals(session.getId())) {
-                webSocketSession.sendMessage(new TextMessage(response));
-            }
-        }
-    }
-
     private void validateRequest(PlayRequest playRequest) {
 
         if (playRequest.getIndex() < 1 || playRequest.getIndex() > 9)
@@ -136,18 +133,6 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
 
         if (playRequest.getPlayMove() == null)
             throw new BadRequestException(PLAY_MOVE_ERROR_MESSAGE);
-    }
-
-    private String getResponse(WebSocketSession session, PlayRequest playRequest, boolean won, Player player) throws IOException {
-        String response = objectMapper.writeValueAsString(playRequest);
-
-        if (won) {
-            log.info("player won!");
-            session.sendMessage(new TextMessage("You are the WINNER !!"));
-            response = player.getUserName() + " WON !!";
-        }
-
-        return response;
     }
 
     @Override
@@ -164,7 +149,6 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
     }
 
     private String getFromSession(WebSocketSession session, String header) {
-
         return Optional.of(session)
                 .map(WebSocketSession::getHandshakeHeaders)
                 .map(t -> t.get(header))

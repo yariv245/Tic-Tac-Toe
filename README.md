@@ -117,11 +117,10 @@ mvn spring-boot:run
 - Password-based authentication for players.
 - Turn-based logic ensures players can only play during their turn.
 - Board structure supports rows and columns for better management.
-- Comprehensive win condition checks (horizontal, vertical, diagonal).
+- Comprehensive win/draw condition checks (horizontal, vertical, diagonal).
 - Validation of moves to prevent invalid inputs or duplicate moves.
 - Caffeine cache for active boards.
 - Error handling and messaging for a smoother player experience.
 
 ### Improvements and Next Steps
-- Support in Draw case.
 - Implement a timeout mechanism to handle inactive players.

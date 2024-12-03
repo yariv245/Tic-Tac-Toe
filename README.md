@@ -47,6 +47,7 @@ This project implements a real-time multiplayer Tic Tac Toe game using **Java**,
 
 ### 3. Player Move
 - Players send messages with their desired move, e.g., { "index": 8, "playMove": "O" }.
+- PLayer have timeout of 1 minute.
 - The server:
    1. Validates the move:
        - Ensures the move is being made during the player's turn.
@@ -123,4 +124,3 @@ mvn spring-boot:run
 - Error handling and messaging for a smoother player experience.
 
 ### Improvements and Next Steps
-- Implement a timeout mechanism to handle inactive players.

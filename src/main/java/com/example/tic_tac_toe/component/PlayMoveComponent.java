@@ -40,7 +40,7 @@ public class PlayMoveComponent {
         if (emptyCells.size() != 1)
             return false;
 
-        return findOpponentPlayMove(playMove)
+        return PlayMove.findOpponentPlayMove(playMove)
                 .map(this::mapToTestCell)
                 .map(testCell -> {
                     testCell.setIndex(emptyCells.get(0).getIndex());
@@ -48,12 +48,6 @@ public class PlayMoveComponent {
                     return !isWon(testCell, board);
                 })
                 .orElse(false);
-    }
-
-    private Optional<PlayMove> findOpponentPlayMove(PlayMove playMove) {
-        return Arrays.stream(PlayMove.values())
-                .filter(pm -> !pm.equals(playMove))
-                .findFirst();
     }
 
     private Cell mapToTestCell(PlayMove playMove) {

@@ -3,6 +3,8 @@ package com.example.tic_tac_toe.handler;
 import com.example.tic_tac_toe.component.*;
 import com.example.tic_tac_toe.exception.BadRequestException;
 import com.example.tic_tac_toe.exception.BusinessException;
+import com.example.tic_tac_toe.model.PlayMove;
+import com.example.tic_tac_toe.model.PlayerTurn;
 import com.example.tic_tac_toe.model.entity.Board;
 import com.example.tic_tac_toe.model.entity.Cell;
 import com.example.tic_tac_toe.model.entity.Player;
@@ -16,7 +18,6 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-import java.io.IOException;
 import java.util.*;
 
 import static com.example.tic_tac_toe.util.CacheConstant.*;
@@ -45,7 +46,11 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
 
         if (board.getPlayers().size() == 2) {
             String firstPlayerUserName = getFirstPlayerUserName(board);
-            caffeineCacheComponent.put(BOARD_ID_TO_PLAYER_TURN, board.getId().toString(), firstPlayerUserName);
+            PlayerTurn playerTurn = PlayerTurn.builder()
+                    .userName(firstPlayerUserName)
+                    .playMove(PlayMove.X)
+                    .build();
+            caffeineCacheComponent.put(BOARD_ID_TO_PLAYER_TURN, board.getId().toString(), playerTurn);
         }
     }
 
@@ -75,18 +80,23 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
         String playerUserName = getFromSession(session, "userName");
         Long boardId = caffeineCacheComponent.find(USERNAME_TO_BOARD_ID, playerUserName, Long.class)
                 .orElseThrow();
-        Board board = caffeineCacheComponent.find(BOARD_ID_TO_BOARD, boardId.toString(), Board.class)
-                .orElseThrow();
-        Player player = caffeineCacheComponent.find(USERNAME_TO_PLAYER, playerUserName, Player.class)
-                .orElseThrow();
-        String playerUserNameTurn = caffeineCacheComponent.find(BOARD_ID_TO_PLAYER_TURN, board.getId().toString(), String.class)
+        PlayerTurn playerUserNameTurn = caffeineCacheComponent.find(BOARD_ID_TO_PLAYER_TURN, boardId.toString(), PlayerTurn.class)
                 .orElseThrow();
 
-        if (!Objects.equals(playerUserNameTurn, player.getUserName())) {
+        if (!Objects.equals(playerUserNameTurn.getUserName(), playerUserName)) {
             session.sendMessage(new TextMessage("It's not your TURN !"));
             return;
         }
 
+        if (!Objects.equals(playerUserNameTurn.getPlayMove(), playRequest.getPlayMove())) {
+            session.sendMessage(new TextMessage("Wrong play Move entered !"));
+            return;
+        }
+
+        Board board = caffeineCacheComponent.find(BOARD_ID_TO_BOARD, boardId.toString(), Board.class)
+                .orElseThrow();
+        Player player = caffeineCacheComponent.find(USERNAME_TO_PLAYER, playerUserName, Player.class)
+                .orElseThrow();
         Cell cell = playMoveComponent.play(playRequest, board, player);
         List<WebSocketSession> webSocketSessions = caffeineCacheComponent.find(BOARD_ID_TO_SESSIONS, board.getId().toString(), List.class)
                 .orElseThrow();
@@ -98,29 +108,36 @@ public class TicTacToeWebSocketHandler extends TextWebSocketHandler {
             sessionComponent.closeSessions(session, webSocketSessions);
             boardComponent.closeGame(board);
             session.close(CloseStatus.NORMAL);
-        } if(playMoveComponent.isDraw(board, playRequest.getPlayMove())){
+        }
+        if (playMoveComponent.isDraw(board, playRequest.getPlayMove())) {
             log.info("!! DRAW !!");
             sessionComponent.sendMessages(webSocketSessions, "DRAW !");
             sessionComponent.closeSessions(session, webSocketSessions);
             boardComponent.closeGame(board);
             session.close(CloseStatus.NORMAL);
-        }else {
+        } else {
             String response = objectMapper.writeValueAsString(playRequest);
             sessionComponent.sendMessages(session, webSocketSessions, response);
-            updateNextPlayerTurn(player, board);
+            updateNextPlayerTurn(playerUserNameTurn, board);
         }
 
     }
 
-    private void updateNextPlayerTurn(Player player, Board board) {
-        String opponentUserName = getOpponentUserName(player, board);
-        caffeineCacheComponent.put(BOARD_ID_TO_PLAYER_TURN, board.getId().toString(), opponentUserName);
+    private void updateNextPlayerTurn(PlayerTurn currentPlayer, Board board) {
+        String opponentUserName = getOpponentUserName(currentPlayer.getUserName(), board);
+        PlayMove opponentPlayMove = PlayMove.findOpponentPlayMove(currentPlayer.getPlayMove())
+                .orElseThrow(() -> new BusinessException("Couldn't find Opponent play move"));
+        PlayerTurn playerTurn = PlayerTurn.builder()
+                .userName(opponentUserName)
+                .playMove(opponentPlayMove)
+                .build();
+        caffeineCacheComponent.put(BOARD_ID_TO_PLAYER_TURN, board.getId().toString(), playerTurn);
     }
 
-    private String getOpponentUserName(Player player, Board board) {
+    private String getOpponentUserName(String playerUserName, Board board) {
         return board.getPlayers()
                 .stream()
-                .filter(t -> !Objects.equals(t.getUserName(), player.getUserName()))
+                .filter(t -> !Objects.equals(t.getUserName(), playerUserName))
                 .findFirst()
                 .map(Player::getUserName)
                 .orElseThrow(() -> new BusinessException(OPPONENT_NOT_FOUND_MESSAGE));
